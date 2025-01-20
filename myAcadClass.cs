@@ -70,6 +70,8 @@ public static class GlobalVariables // Or put it in your existing class as a sta
     private static bool _foundBestCandidate = false;
     private static List<string> _potentialDrawingNames = new List<string>();
     private static List<(string name, double numberValue, string numberPart, string layer)> _detectedCandidates = new List<(string name, double numberValue, string numberPart, string layer)>();
+    private static object[][] _oldSettings = new object[4][];
+    
 
     public static string UniqueId
     {
@@ -101,6 +103,12 @@ public static class GlobalVariables // Or put it in your existing class as a sta
         get { return _detectedCandidates; }
         set { _detectedCandidates = value; }
     }
+    public static object[][] OldSettings
+    {
+        get { return _oldSettings; }
+        set { _oldSettings = (object[][])value; }
+    }
+
 
     // More complex example with thread safety (important in multithreaded environments like AutoCAD)
     private static int _counter = 0;
@@ -145,37 +153,59 @@ public class MyAcadLib
         Editor ed = acApp.DocumentManager.MdiActiveDocument.Editor;
         Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
 
+        if (acDoc == null)
+        {
+            ed.WriteMessage("\nError: No active document.");
+            return;
+        }
+
         string filename = Path.GetFileName(acDoc.Name);
+        int filenameLength = filename.Length;
+        string spaces = "";
+        if (filenameLength <= 40)
+        {
+            spaces = new string(' ', 40 - filenameLength);
+        }
+        
 
-        ed.WriteMessage($"___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|\n");
-        ed.WriteMessage($"_|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|__\n");
-        ed.WriteMessage($"___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|\n");
-        ed.WriteMessage($"_|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|__\n");
-        ed.WriteMessage($"___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|\n");
-        ed.WriteMessage($"_|___|                                                                ..            _|___|__\n");
-        ed.WriteMessage($"___|__ .-==+%@@@*====+##*:.  .:=+%@@@%+==-==#@@@@+==:-=+@@@*=-..     .#%:.          ___|___|\n");
-        ed.WriteMessage($"_|___|      #@@@=:     =@@@-.    :%@@%=.    .@@@@-.     :#=:        .+@@*:.         _|___|__\n");
-        ed.WriteMessage($"___|__      #@@@=:     .@@@@-.   .=@@@#:    .=@@@#:.    :+:.        -%@@@+.         ___|___|\n");
-        ed.WriteMessage($"_|___|      #@@@=:     :@@@*-.     #@@@+.   :##@@@+.   .*:.        .++@@@%-.        _|___|__\n");
-        ed.WriteMessage($"___|__      #@@@=:...:+@%*=:.      .%@@@-.  =-=@@@#-  .*-.         ==:+@@@#:.       ___|___|\n");
-        ed.WriteMessage($"_|___|      #@@@=-----=@@*.         :@@@@:..*:.%@@@=. *=:         :=:. #@@@+.       _|___|__\n");
-        ed.WriteMessage($"___|__      #@@@=:     .*@@@-.      .=@@@#:#-: .@@@@--+-.        .*=-::-@@@@=.      ___|___|\n");
-        ed.WriteMessage($"_|___|      #@@@=:      :@@@@-.      .*@@@*=-.  :@@@%*-.        .=-:....=@@@%-.     _|___|__\n");
-        ed.WriteMessage($"___|__      #@@@=:      :@@@%-.       .%@@%=.   .#@@@=:.       .-=:     .+@@@*:     ___|___|\n");
-        ed.WriteMessage($"_|___|      #@@@=:     .%@@#-:.        :@@*-     -@@+:.        -#=.      .%@@@=.    _|___|__\n");
-        ed.WriteMessage($"___|__ .==+*%%%%#+===+#%#=-:.           -#=.     .+#-.     .-*%%%%*=:.-=+*#%%%%*==..___|___|\n");
-        ed.WriteMessage($"_|___|  ..................              ....       ..       .......... ............._|___|__\n");
-        ed.WriteMessage($"___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|\n");
-        ed.WriteMessage($"_|___|___|___|                                       |___|___|___|___|___|___|___|___|___|__\n");
-        ed.WriteMessage($"___|___|___|__            RunBatchOperations:        __|___|___|___|___|___|___|___|___|__|__\n");
-        ed.WriteMessage($"_|___|___|___|             {filename}         _|__|__|___|___|___|___|___|___|___|__\n");
-        ed.WriteMessage($"___|___|___|__                                       __|___|___|___|___|___|___|___|___|___|__\n");
-        ed.WriteMessage($"___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|_\n");
-        ed.WriteMessage($"_|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|__\n");
-
-        acDoc = null;
+        try
+        {
+            ed.WriteMessage($" [|***********|]__|__|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|_[|***********|] \n");
+            ed.WriteMessage($" [|@@@@@@@@@@@|]___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___[|@@@@@@@@@@@|] \n");
+            ed.WriteMessage($"  ^||@@@@@@@||^__|__|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___^||@@@@@@@||^ \n");
+            ed.WriteMessage($"   ||*******||_|__|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|__||*******|| \n");
+            ed.WriteMessage($"    || | | ||__|____|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|_|| | | || \n");
+            ed.WriteMessage($"    ||:|:|:||_|___||                                                                ..            ||___|__||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||__|___| .-==+%@@@*====+##*:.  .:=+%@@@%+==-==#@@@@+==:-=+@@@*=-..     .#%:.          |__|____||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||_|___||      #@@@=:     =@@@-.    :%@@%=.    .@@@@-.     :#=:        .+@@*:.         ||___|__||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||__|___|      #@@@=:     .@@@@-.   .=@@@#:    .=@@@#:.    :+:.        -%@@@+.         |__|____||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||_|___||      #@@@=:     :@@@*-.     #@@@+.   :##@@@+.   .*:.        .++@@@%-.        ||___|__||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||__|___|      #@@@=:...:+@%*=:.      .%@@@-.  =-=@@@#-  .*-.         ==:+@@@#:.       |__|____||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||_|___||      #@@@=-----=@@*.         :@@@@:..*:.%@@@=. *=:         :=:. #@@@+.       ||___|__||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||__|___|      #@@@=:     .*@@@-.      .=@@@#:#-: .@@@@--+-.        .*=-::-@@@@=.      |__|____||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||_|___||      #@@@=:      :@@@@-.      .*@@@*=-.  :@@@%*-.        .=-:....=@@@%-.     ||___|__||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||__|___|      #@@@=:      :@@@%-.       .%@@%=.   .#@@@=:.       .-=:     .+@@@*:     |__|____||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||_|___||      #@@@=:     .%@@#-:.        :@@*-     -@@+:.        -#=.      .%@@@=.    ||___|__||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||__|___| .==+*%%%%#+===+#%#=-:.           -#=.     .+#-.     .-*%%%%*=:.-=+*#%%%%*==..|__|____||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||_|____|______________________________________________________________________________|____|__||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||__|__|__|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|____||:|:|:|| \n");
+            ed.WriteMessage($"    ||:|:|:||_|____|___|___|_|                                         |___|___|___|___|___|___|___|___|__||:|:|:|| \n");
+            ed.WriteMessage($"    || | | ||__|__|__|___|___|           RunBatchOperations:           |__|__|___|___|___|___|___|___|__|_|| | | || \n");
+            ed.WriteMessage($"   ||*******||_|___|__|__|___|             {filename}{spaces}  |___|___|___|___|___||*******|| \n");
+            ed.WriteMessage($"  ,||@@@@@@@||.__|___|__|__|_|_________________________________________|___|___|___|___|___|___|___|__|_,||@@@@@@@||. \n");
+            ed.WriteMessage($" [|@@@@@@@@@@@|]__|____|__|___|___|_____|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|__[|@@@@@@@@@@@|] \n");
+            ed.WriteMessage($" [|***********|]___|__|__|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|___|_[|***********|] \n");
+        }
+        catch (System.Exception ex)
+        {
+            ed.WriteMessage($"\nError: {ex.Message}\nStack Trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            acDoc = null;
+        }
     }
-    
+
     [CommandMethod("ZoomExtents")]
     public void ZoomExtents()
     {
@@ -214,11 +244,7 @@ public class MyAcadLib
                     {
                         Layout layout = trans.GetObject(layoutEntry.Value, OpenMode.ForRead) as Layout;
 
-                        // Switch to the layout
-                        if (layout.LayoutName != "Model")
-                        {
-                            acDoc.Editor.Command("_.LAYOUT", "Set", layout.LayoutName);
-                        }
+                        acDoc.Editor.Command("_.LAYOUT", "Set", layout.LayoutName);
 
                         // Apply zoom extents
                         ed.Command("._ZOOM", "E");
@@ -244,15 +270,48 @@ public class MyAcadLib
         var acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
         var ed = acDoc.Editor;
 
+        var oldSettings = new object[4][];
+        oldSettings[0] = new object[] { "FILEDIA", Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("FILEDIA") };
+        oldSettings[1] = new object[] { "BACKGROUNDPLOT", Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("BACKGROUNDPLOT") };
+        oldSettings[2] = new object[] { "CMDDIA", Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("CMDDIA") };
+        oldSettings[3] = new object[] { "CMDECHO", Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("CMDECHO") };
+        GlobalVariables.OldSettings = oldSettings;
+
         try
         {
             Autodesk.AutoCAD.ApplicationServices.Application.SetSystemVariable("FILEDIA", 0);
+            Autodesk.AutoCAD.ApplicationServices.Application.SetSystemVariable("BACKGROUNDPLOT", 0);
+            Autodesk.AutoCAD.ApplicationServices.Application.SetSystemVariable("CMDDIA", 0);
+            Autodesk.AutoCAD.ApplicationServices.Application.SetSystemVariable("CMDECHO", 0);
         }
         catch (System.Exception ex)
         {
             ed.WriteMessage($"\nError: {ex.Message}");
         }
         acDoc.SendStringToExecute("CMDECHO 0 ", true, false, false);
+        acDoc.SendStringToExecute("CMDDIA 0 ", true, false, false);
+        acDoc.SendStringToExecute("FILEDIA 0 ", true, false, false);
+        acDoc.SendStringToExecute("BACKGROUNDPLOT 0 ", true, false, false);
+        acDoc = null;
+    }
+
+    [CommandMethod("RestoreWarnings")]
+    public void RestoreWarnings()
+    {
+        var acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+        var ed = acDoc.Editor;
+        
+        foreach (var setting in GlobalVariables.OldSettings)
+        {
+            try
+            {
+                Autodesk.AutoCAD.ApplicationServices.Application.SetSystemVariable(setting[0].ToString(), setting[1]);
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage($"\nError: {ex.Message}");
+            }
+        }
         acDoc = null;
     }
 
@@ -326,7 +385,6 @@ public class MyAcadLib
                     ed.WriteMessage("\nNo sheets found to activate.");
                 }
             }
-
             acTrans.Commit();
         }
         acDoc = null;
@@ -408,6 +466,8 @@ public class MyAcadLib
                 ObjectIdCollection blockIdsToPurge = new ObjectIdCollection();
                 List<string> purgedBlockNames = new List<string>();
 
+                StringBuilder stringBuilder = new StringBuilder();
+
                 foreach (ObjectId blockId in blockTable)
                 {
                     BlockTableRecord btr = trans.GetObject(blockId, OpenMode.ForRead) as BlockTableRecord;
@@ -418,13 +478,29 @@ public class MyAcadLib
                         purgedBlockNames.Add(btr.Name);
                     }
 
-                    if (btr.IsFromExternalReference)
+                    if (btr.IsFromExternalReference && btr.XrefStatus == XrefStatus.Unreferenced)
                     {
-                        if (btr.XrefStatus == XrefStatus.Unreferenced)
+                        try
                         {
+                            string path = btr.PathName;
+                            // If we get here, the Xref is referenced but can't be resolved (Unreferenced)
                             blockIdsToPurge.Add(blockId);
                             purgedBlockNames.Add(btr.Name);
-                            ed.WriteMessage($"\nUnreferenced Xref '{btr.Name}' marked for removal.");
+                            ed.WriteMessage($"\nUnreferenced Xref '{btr.Name}' marked for removal. Path: {path}");
+                            stringBuilder.AppendLine($"\nUnreferenced Xref '{btr.Name}' marked for removal. Path: {path}");
+                        }
+                        catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                        {
+                            if (ex.ErrorStatus == Autodesk.AutoCAD.Runtime.ErrorStatus.FileNotFound)
+                            {
+                                // This is a "Not Found" xref - SKIP REMOVAL
+                                ed.WriteMessage($"\nKeeping Not Found Xref '{btr.Name}'.");
+                            }
+                            else
+                            {
+                                // Other exceptions (handle as needed)
+                                ed.WriteMessage($"\nError checking Xref '{btr.Name}': {ex.Message}");
+                            }
                         }
                     }
                 }
@@ -461,6 +537,8 @@ public class MyAcadLib
                         }
                     }
                 }
+                
+                ed.WriteMessage(stringBuilder.ToString());
 
                 trans.Commit();
             }
@@ -477,10 +555,16 @@ public class MyAcadLib
     [CommandMethod("BindXrefs")]
     public void BindXrefs()
     {
+        // Only binds if the xref has no valid relative reference
+
         Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
         Editor ed = acDoc.Editor;
         Database db = acDoc.Database;
         int bindCount = 0;
+        int notFoundCount = 0;
+        int unreferencedCount = 0;
+
+        ed.WriteMessage("\nBinding Xrefs if no valid relative reference is available...");
 
         try
         {
@@ -488,17 +572,48 @@ public class MyAcadLib
             {
                 BlockTable blockTable = acTrans.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
                 ObjectIdCollection xrefsToBind = new ObjectIdCollection();
+                List<string> xrefsBound = new List<string>();
 
-                bindCount = 0;
                 foreach (ObjectId btrId in blockTable)
                 {
                     BlockTableRecord btr = acTrans.GetObject(btrId, OpenMode.ForRead) as BlockTableRecord;
 
-                    // Check if this block is an xref
-                    if (btr.IsFromExternalReference && !btr.IsResolved)
+                    if (btr.IsFromExternalReference)
                     {
-                        xrefsToBind.Add(btrId);
-                        bindCount++;
+                        if (!btr.IsResolved)
+                        {
+                            try
+                            {
+                                string path = btr.PathName; // Attempt to get the path
+                                                            // If we get here, the xref *is* referenced but can't be resolved (e.g., path is incorrect)
+                                unreferencedCount++;
+                                ed.WriteMessage($"\nXref '{btr.Name}' is Unreferenced. Path: {path}");
+                            }
+                            catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                            {
+                                if (ex.ErrorStatus == Autodesk.AutoCAD.Runtime.ErrorStatus.FileNotFound)
+                                {
+                                    // This exception indicates the xref file is not found
+                                    notFoundCount++;
+                                    ed.WriteMessage($"\nXref '{btr.Name}' is Not Found.");
+                                }
+                                else
+                                {
+                                    // Other exceptions (less common, but handle them)
+                                    ed.WriteMessage($"\nError getting path for Xref '{btr.Name}': {ex.Message}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Check if the Xref has a valid relative reference
+                            if (string.IsNullOrEmpty(btr.PathName) || !File.Exists(Path.Combine(Path.GetDirectoryName(acDoc.Name), btr.PathName)))
+                            {
+                                xrefsToBind.Add(btrId);
+                                xrefsBound.Add(btr.Name);
+                                bindCount++;
+                            }
+                        }
                     }
                 }
 
@@ -508,16 +623,22 @@ public class MyAcadLib
                 }
 
                 acTrans.Commit();
+
+                // Log the names of the Xrefs that were bound
+                foreach (string xrefName in xrefsBound)
+                {
+                    ed.WriteMessage($"\nBound Xref: {xrefName}");
+                }
             }
 
             ed.WriteMessage($"\n- {bindCount} XRefs have been bound.");
+            ed.WriteMessage($"\n- {notFoundCount} XRefs were Not Found.");
+            ed.WriteMessage($"\n- {unreferencedCount} XRefs were Unreferenced.");
         }
         catch (System.Exception ex)
         {
             ed.WriteMessage($"\nError: {ex.Message}");
         }
-        acDoc = null;
-        db = null;
     }
 
     [CommandMethod("ExportToACAD2018")]
@@ -529,11 +650,12 @@ public class MyAcadLib
         DrawingNameExtractor extractor = new DrawingNameExtractor();
         StringBuilder logBuilder = new StringBuilder();
 
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Exporting to ACAD2018...");
+
         string extractedName = "";
 
         string debugLogFilePath = @"C:/Users/mnewman/Desktop/exportDebugLog.txt";
         string filesToDeletePath = @"C:\mn\filesToDelete.txt";
-        // logBuilder.AppendLine($"\n[GlobalVariables.UniqueId]: {GlobalVariables.UniqueId}");
 
         try
         {
@@ -546,7 +668,6 @@ public class MyAcadLib
 
                 Regex regex = new Regex(@"^(?<yearProject>\d{4}-\d{4})\s+(?<dwgName>[A-Za-z0-9\-.]+)\s*(?<descriptors>.*?)\.dwg$", RegexOptions.IgnoreCase);
                 Match match = regex.Match(filename + ".dwg");
-                // logBuilder.AppendLine($"\nSession: {GlobalVariables.UniqueId} | filename: {filename}");
 
                 if (!match.Success)
                 {
@@ -568,20 +689,14 @@ public class MyAcadLib
                     {
                         Layout layout = acTrans.GetObject(layoutEntry.Value, OpenMode.ForRead) as Layout;
                         if (!layout.LayoutName.Equals("Model", StringComparison.InvariantCultureIgnoreCase) &&
-                            layout.LayoutName.IndexOf("Layout", StringComparison.InvariantCultureIgnoreCase) < 0)
+                            layout.LayoutName.IndexOf("Layout", StringComparison.InvariantCultureIgnoreCase) < 0 &&
+                            layout.LayoutName.IndexOf("SK", StringComparison.InvariantCultureIgnoreCase) < 0)
                         {
                             sheetCount++;
                         }
                     }
 
                     List<string> extractedNames = extractor.GetPotentialDrawingNames(acDoc);
-
-                    /*
-                    foreach (string name in GlobalVariables.PotentialDrawingNames)
-                    {
-                        logBuilder.AppendLine($"\nFound a potential drawing name: {name}");
-                    }
-                    */
 
                     if (GlobalVariables.PotentialDrawingNames == null || !GlobalVariables.PotentialDrawingNames.Any())
                     {
@@ -594,12 +709,9 @@ public class MyAcadLib
                     extractedName = bestDrawingName;
                     string directoryName = Path.GetFileName(directory);
 
-                    // logBuilder.AppendLine($"<<<--- dwgName: {dwgName} <<<--- directoryName: {directoryName} <<<--- extractedName: {extractedName}");
-
                     if (extractedName != null && !directoryName.Trim().Equals("A", StringComparison.OrdinalIgnoreCase))
                     {
                         dwgName = $"{extractedName}";
-                        logBuilder.AppendLine($"\nNew drawing name to be applied to filename: {dwgName}");
                     }
 
                     if (sheetCount > 1 && !dwgName.EndsWith("x", StringComparison.InvariantCultureIgnoreCase) && !directoryName.Trim().Equals("A", StringComparison.OrdinalIgnoreCase))
@@ -629,6 +741,8 @@ public class MyAcadLib
                     counter++;
                 }
 
+                ActivateFirstSheet();
+
                 db.SaveAs(acadFilePath, DwgVersion.AC1027);
                 ed.WriteMessage($"\nSaved file as ACAD2018: {acadFilePath}");
 
@@ -652,26 +766,6 @@ public class MyAcadLib
     }
 
 
-    [CommandMethod("CloseCurrentDocument")]
-    public void CloseCurrentDocument()
-    {
-        Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
-        Editor ed = acDoc.Editor;
-
-        // Check if a document is open
-        if (acDoc != null)
-        {
-            ed.WriteMessage("\nClosing the current document...");
-            // acDoc.ClearUndo();
-            acDoc.CloseAndDiscard();
-            acDoc.Dispose();
-        }
-        else
-        {
-            ed.WriteMessage("\nNo active document to close.");
-        }
-    }
-
     // new commandmethod that does nothing except print a message with a unique id
     [CommandMethod("PrintMessageWithUniqueId")]
     public void PrintMessageWithUniqueId()
@@ -680,6 +774,17 @@ public class MyAcadLib
         Editor ed = acDoc.Editor;
         string uniqueId = Guid.NewGuid().ToString();
         ed.WriteMessage($"\n[{uniqueId}] Hello from PrintMessageWithUniqueId");
+        Console.WriteLine($"\n[{uniqueId}] Hello from PrintMessageWithUniqueId");
+    }
+    [CommandMethod("_GetUniqueId")]
+    public string _GetUniqueId()
+    {
+        Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+        Editor ed = acDoc.Editor;
+        string uniqueId = Guid.NewGuid().ToString();
+        ed.WriteMessage($"\n[{uniqueId}] Hello from PrintMessageWithUniqueId");
+        Console.WriteLine($"\n[{uniqueId}] Hello from PrintMessageWithUniqueId");
+        return uniqueId;
     }
 
     [CommandMethod("DetectMatchingNameInFile")]
@@ -690,8 +795,25 @@ public class MyAcadLib
         Database db = acDoc.Database;
         DrawingNameExtractor extractor = new DrawingNameExtractor();
         StringBuilder reportBuilder = new StringBuilder();
+        StringBuilder csvBuilder = new StringBuilder();
         string foundMatchLogPath = @"C:/Users/mnewman/Desktop/foundMatchLog.txt";
-        // reportBuilder.AppendLine($"\nCurrent file: " + acDoc.Name);
+        string csvFilePath = @"C:/Users/mnewman/Desktop/matchReport.csv";
+
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Detecting matching name in file...");
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Detecting matching name in file...");
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Detecting matching name in file...");
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Detecting matching name in file...");
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Detecting matching name in file...");
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Detecting matching name in file...");
+        ed.WriteMessage($"\n[{GlobalVariables.UniqueId}] Detecting matching name in file...");
+
+        // Ensure the CSV file exists and initialize it with headers if it's new
+        if (!File.Exists(csvFilePath))
+        {
+            csvBuilder.AppendLine("ParentDirectory,FileName,BestGuess,HasNotFoundXrefs");
+            File.WriteAllText(csvFilePath, csvBuilder.ToString());
+            csvBuilder.Clear(); // Clear the builder after writing headers
+        }
 
         try
         {
@@ -707,12 +829,24 @@ public class MyAcadLib
 
                 Regex regex = new Regex(@"^(?<yearProject>\d{4}-\d{4}) (?<dwgName>[A-Za-z0-9\-.]+)\s?(?<descriptors>.*?)\.dwg$", RegexOptions.IgnoreCase);
                 Match match = regex.Match(filename + ".dwg");
-                string dwgName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(match.Groups["dwgName"].Value.Replace("-", ""));
+                string dwgName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(match.Groups["dwgName"].Value.Replace("-", "").Replace("x", "").Replace("X", ""));
 
                 string drawingLetter = extractor.GetDrawingLetterFromFilename(acDoc);
                 string bestDrawingName = extractor.GetBestDrawingName(GlobalVariables.PotentialDrawingNames, drawingLetter, dwgName);
 
-                // for all objects in detectedcandidates, if they match dwgName both case insensitive, then we have a match
+                bool hasNotFoundXrefs = false;
+
+                // Check for "not found" Xrefs
+                BlockTable blockTable = acTrans.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
+                foreach (ObjectId btrId in blockTable)
+                {
+                    BlockTableRecord btr = acTrans.GetObject(btrId, OpenMode.ForRead) as BlockTableRecord;
+                    if (btr.IsFromExternalReference && btr.XrefStatus == XrefStatus.FileNotFound)
+                    {
+                        hasNotFoundXrefs = true;
+                        break;
+                    }
+                }
 
                 if (GlobalVariables.DetectedCandidates.Any())
                 {
@@ -725,20 +859,19 @@ public class MyAcadLib
                         }
                     }
                 }
-                else
-                {
-                    // reportBuilder.AppendLine($"============! | No detectable strings in file for {filename}");
-                }
+
                 if (!GlobalVariables.FoundMatchInFile)
                 {
                     if (GlobalVariables.DetectedCandidates.Any())
                     {
                         var bestGuess = GlobalVariables.DetectedCandidates.First();
                         reportBuilder.AppendLine($"==! ATTENTION | No match for {filename} | Best guess: {bestGuess.name}");
+                        csvBuilder.AppendLine($"{directory},{filename},{bestGuess.name},{hasNotFoundXrefs}");
                     }
                     else
                     {
                         reportBuilder.AppendLine($"==! ATTENTION | No match for {filename} | No candidates available");
+                        csvBuilder.AppendLine($"{directory},{filename},None found,{hasNotFoundXrefs}");
                     }
                 }
 
@@ -758,9 +891,176 @@ public class MyAcadLib
         }
         catch (System.Exception ex)
         {
-            ed.WriteMessage($"No detected candidates found for {ex.Message}");
+            ed.WriteMessage($"Error writing to log file: {ex.Message}");
+        }
+
+        // Write accumulated CSV data to the file
+        try
+        {
+            using (FileStream fs = new FileStream(csvFilePath, FileMode.Append, FileAccess.Write, FileShare.None))
+            using (StreamWriter sw = new StreamWriter(fs))
+            {
+                sw.Write(csvBuilder.ToString());
+            }
+        }
+        catch (IOException ex)
+        {
+            ed.WriteMessage($"CSV file is in use: {ex.Message}");
+        }
+        catch (System.Exception ex)
+        {
+            ed.WriteMessage($"Error writing to CSV file: {ex.Message}");
+        }
+
+        // Call the cleanup subroutine
+        Cleanup(acDoc);
+    }
+
+    private void Cleanup(Document acDoc)
+    {
+        Editor ed = acDoc.Editor;
+        Database db = acDoc.Database;
+
+        try
+        {
+            using (Transaction acTrans = db.TransactionManager.StartTransaction())
+            {
+                BlockTable blockTable = acTrans.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
+                foreach (ObjectId btrId in blockTable)
+                {
+                    BlockTableRecord btr = acTrans.GetObject(btrId, OpenMode.ForRead) as BlockTableRecord;
+                    if (btr.IsAnonymous)
+                    {
+                        btr.UpgradeOpen();
+                        btr.Erase();
+                        btr.DowngradeOpen();
+                    }
+                }
+                acTrans.Commit();
+            }
+        }
+        catch (System.Exception ex)
+        {
+            ed.WriteMessage($"\nError during cleanup: {ex.Message}");
         }
     }
+
+    [CommandMethod("GetXrefInfo")]
+    public void GetXrefInfo()
+    {
+        Document acDoc = Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument;
+        Editor ed = acDoc.Editor;
+        Database db = acDoc.Database;
+        StringBuilder logBuilder = new StringBuilder();
+        string xrefLogPath = @"C:/Users/mnewman/Desktop/xrefLog.txt";
+
+        try
+        {
+            using (Transaction acTrans = db.TransactionManager.StartTransaction())
+            {
+                BlockTable blockTable = acTrans.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
+                ObjectIdCollection xrefsToBind = new ObjectIdCollection();
+                List<string> xrefsBound = new List<string>();
+
+                foreach (ObjectId btrId in blockTable)
+                {
+                    BlockTableRecord btr = acTrans.GetObject(btrId, OpenMode.ForRead) as BlockTableRecord;
+
+                    if (btr.IsFromExternalReference)
+                    {
+                        // logBuilder.AppendLine($"Current File: {acDoc.Name}");
+                        // logBuilder.AppendLine($"Xref: {btr.Name} | Path: {btr.PathName}");
+                        // logBuilder.AppendLine($"Status: {btr.XrefStatus} | Usage Count: {btr.GetBlockReferenceIds(true, false).Count}");
+
+                        // run a subroutine that processes the xref
+                        bool isReal = isXrefReal(btr.PathName, acDoc.Name, logBuilder);
+                        if (!isReal)
+                        {
+                            logBuilder.AppendLine($">>>> {acDoc.Name}: Xref file {btr.PathName} does not exist in current file system.");
+                        }
+                        else
+                        {
+                            // logBuilder.AppendLine($"Xref file exists in current file system.");
+                        }
+                        // logBuilder.AppendLine($"Xref file exists in current file system: {isReal}");
+                        // logBuilder.AppendLine($"-----------------------------------");
+                    }
+                }
+
+                acTrans.Commit();
+            }
+            // write log file
+            File.AppendAllText(xrefLogPath, logBuilder.ToString());
+        }
+        catch (System.Exception ex)
+        {
+            ed.WriteMessage($"\nError: {ex.Message}");
+        }
+    }
+
+    // subroutine to check if the xref is real
+    private bool isXrefReal(string xrefPath, string fileFullPath, StringBuilder logBuilder)
+    {
+        //logBuilder.AppendLine($"Xref Path: {xrefPath}");
+                
+        if (xrefPath.StartsWith(".") || xrefPath.StartsWith(".."))
+        {
+            // continue doing stuff
+            // parse the currentFilePath into the current filename and the path
+            string[] xrefPathParts = xrefPath.Split(Path.DirectorySeparatorChar);
+            // logBuilder.AppendLine($"Path Parts: {string.Join(", ", xrefPathParts)}");
+            string currentFileName = xrefPathParts[xrefPathParts.Length - 1];
+            
+            //logBuilder.AppendLine($"    @ Current File: {currentFileName}");
+
+            string xrefFileName = xrefPathParts[xrefPathParts.Length - 1];
+            // logBuilder.AppendLine($"Current Xref Filename: {xrefFileName}");
+            string currentFileDir = Path.GetDirectoryName(fileFullPath);
+            // logBuilder.AppendLine($"Current File Directory: {currentFileDir}");
+            string[] currentFileDirParts = currentFileDir.Split(Path.DirectorySeparatorChar);
+            // logBuilder.AppendLine($"Current File Directory Parts: {string.Join(", ", currentFileDirParts)}");
+
+            // count how many .. are in the xrefPathParts
+            int subCount = 0;
+            if (xrefPathParts.Contains("."))
+            {
+                subCount = 0;
+            }
+            if (xrefPathParts.Contains(".."))
+            {
+                subCount = xrefPathParts.Count(f => f == "..");
+            }
+            // logBuilder.AppendLine($"Count: {subCount}");
+
+            string[] newPathParts = currentFileDirParts.Take(currentFileDirParts.Length - subCount).ToArray();
+            // logBuilder.AppendLine($"New Path Parts: {string.Join(", ", newPathParts)}");
+            string[] newXrefPathParts = xrefPathParts.Skip(subCount).ToArray();
+            // logBuilder.AppendLine($"New Xref Path Parts: {string.Join(", ", newXrefPathParts)}");
+            string combinedPathParts = Path.Combine(newPathParts) + "\\" + Path.Combine(newXrefPathParts);
+            // logBuilder.AppendLine($"Combined Path Parts: {combinedPathParts}");
+            string finalPath = Path.Combine(combinedPathParts);
+            // logBuilder.AppendLine($"Final Path: {finalPath}");
+            
+            try
+            {
+                return File.Exists(finalPath);
+            }
+            catch (System.Exception ex)
+            {
+                logBuilder.AppendLine($"Error checking existance of Xref'd File: {ex.Message}");
+                return false;
+            }
+        }
+        else
+        {
+            logBuilder.AppendLine($"Path is not relative: {xrefPath}");
+            return false;
+        }
+
+    }
+
+
+
 
     public class DrawingNameExtractor
     {
@@ -792,95 +1092,85 @@ public class MyAcadLib
                         throw new InvalidOperationException("\nError: Unable to access the block table.");
                     }
 
-                    // Simplified filter to select all objects
-                    TypedValue[] filter = new TypedValue[]
+                    DBDictionary layoutDict = acTrans.GetObject(db.LayoutDictionaryId, OpenMode.ForRead) as DBDictionary;
+
+                    foreach (DBDictionaryEntry layoutEntry in layoutDict)
                     {
-                new TypedValue((int)DxfCode.Start, "*") // Select all objects
-                    };
+                        Layout layout = acTrans.GetObject(layoutEntry.Value, OpenMode.ForRead) as Layout;
+                        string layoutName = layout.LayoutName;
+                        LayoutManager.Current.CurrentLayout = layoutName;
 
-                    SelectionFilter selectionFilter = new SelectionFilter(filter);
-                    PromptSelectionResult selectionResult = ed.SelectAll(selectionFilter);
+                        BlockTableRecord btr = acTrans.GetObject(layout.BlockTableRecordId, OpenMode.ForRead) as BlockTableRecord;
 
-                    // Debugging output to CSV files
-                    string allDetectedFilePath = @"C:/Users/mnewman/Desktop/allDetected.csv";
-
-                    using (StreamWriter sw = new StreamWriter(allDetectedFilePath, true))
-                    {
-                        // Write the header if the file is new
-                        if (new FileInfo(allDetectedFilePath).Length == 0)
+                        foreach (ObjectId objId in btr)
                         {
-                            sw.WriteLine("FileName,TextType,TextContent,PotentialDrawingName,IsMatch,Position,Height,Rotation,Layer,TextStyleId");
-                        }
+                            Entity entity = acTrans.GetObject(objId, OpenMode.ForRead) as Entity;
+                            if (entity == null) continue;
 
-                        if (selectionResult.Status == PromptStatus.OK)
-                        {
-                            SelectionSet selectionSet = selectionResult.Value;
+                            string textType = string.Empty;
+                            string textContent = string.Empty;
+                            string position = string.Empty;
+                            double height = 0;
+                            double rotation = 0;
+                            string layer = string.Empty;
+                            string textStyleId = string.Empty;
 
-                            foreach (SelectedObject selObj in selectionSet)
+                            if (entity is DBText dbText)
                             {
-                                if (selObj != null)
+                                textType = "DBText";
+                                textContent = dbText.TextString;
+                                position = dbText.Position.ToString();
+                                height = dbText.Height;
+                                rotation = dbText.Rotation;
+                                layer = dbText.Layer;
+                                textStyleId = dbText.TextStyleId.ToString();
+                            }
+                            else if (entity is MText mText)
+                            {
+                                textType = "MText";
+                                textContent = mText.Text;
+                                position = mText.Location.ToString();
+                                height = mText.TextHeight;
+                                rotation = mText.Rotation;
+                                layer = mText.Layer;
+                                textStyleId = mText.TextStyleId.ToString();
+                            }
+
+                            // Discard textContent longer than 10 characters
+                            if (textContent.Length > 10)
+                            {
+                                continue;
+                            }
+
+                           // bool isMatch = false;
+                            string potentialDrawingName = string.Empty;
+
+                            if (Regex.IsMatch(textContent.Replace("x", "").Replace("-", ""), drawingNamePattern, RegexOptions.IgnoreCase))
+                            {
+                                Match drawingNameMatch = Regex.Match(textContent.Replace("x", "").Replace("-", ""), drawingNamePattern, RegexOptions.IgnoreCase);
+                                potentialDrawingName = drawingNameMatch.Value;
+                                GlobalVariables.PotentialDrawingNames.Add(potentialDrawingName);
+                                // isMatch = true;
+                                GlobalVariables.FoundBestCandidate = true;
+                            }
+                            /*
+                            if (!string.IsNullOrEmpty(textContent))
+                            {
+                                // Write the log entry in CSV format with double quotes to handle commas and newlines
+                                string allDetectedFilePath = @"C:/Users/mnewman/Desktop/allDetected.csv";
+                                using (StreamWriter sw = new StreamWriter(allDetectedFilePath, true))
                                 {
-                                    string textType = string.Empty;
-                                    string textContent = string.Empty;
-                                    string position = string.Empty;
-                                    double height = 0;
-                                    double rotation = 0;
-                                    string layer = string.Empty;
-                                    string textStyleId = string.Empty;
-
-                                    if (selObj.ObjectId.ObjectClass.DxfName == "TEXT")
+                                    
+                                    // Write the header if the file is new
+                                    if (new FileInfo(allDetectedFilePath).Length == 0)
                                     {
-                                        DBText dbText = acTrans.GetObject(selObj.ObjectId, OpenMode.ForRead) as DBText;
-                                        textType = "DBText";
-                                        textContent = dbText.TextString;
-                                        position = dbText.Position.ToString();
-                                        height = dbText.Height;
-                                        rotation = dbText.Rotation;
-                                        layer = dbText.Layer;
-                                        textStyleId = dbText.TextStyleId.ToString();
+                                        sw.WriteLine("FileName,SheetName,TextType,TextContent,PotentialDrawingName,IsMatch,Position,Height,Rotation,Layer,TextStyleId");
                                     }
-                                    else if (selObj.ObjectId.ObjectClass.DxfName == "MTEXT")
-                                    {
-                                        MText mText = acTrans.GetObject(selObj.ObjectId, OpenMode.ForRead) as MText;
-                                        textType = "MText";
-                                        textContent = mText.Text;
-                                        position = mText.Location.ToString();
-                                        height = mText.TextHeight;
-                                        rotation = mText.Rotation;
-                                        layer = mText.Layer;
-                                        textStyleId = mText.TextStyleId.ToString();
-                                    }
-
-                                    // Discard textContent longer than 10 characters
-                                    if (textContent.Length > 10)
-                                    {
-                                        continue;
-                                    }
-
-                                    bool isMatch = false;
-                                    string potentialDrawingName = string.Empty;
-
-                                    if (Regex.IsMatch(textContent, drawingNamePattern))
-                                    {
-                                        Match drawingNameMatch = Regex.Match(textContent, drawingNamePattern);
-                                        potentialDrawingName = drawingNameMatch.Value;
-                                        // logBuilder.AppendLine($"\nPotential Drawing Name: {potentialDrawingName}");
-                                        GlobalVariables.PotentialDrawingNames.Add(potentialDrawingName);
-                                        isMatch = true;
-                                        GlobalVariables.FoundBestCandidate = true;
-                                    }
-
-                                    if (!string.IsNullOrEmpty(textContent))
-                                    {
-                                        // Write the log entry in CSV format with double quotes to handle commas and newlines
-                                        sw.WriteLine($"\"{currentFilePath}\",\"{textType}\",\"{textContent}\",\"{potentialDrawingName}\",\"{isMatch}\",\"{position}\",\"{height}\",\"{rotation}\",\"{layer}\",\"{textStyleId}\"");
-                                    }
+                                    sw.WriteLine($"\"{currentFilePath}\",\"{layoutName}\",\"{textType}\",\"{textContent}\",\"{potentialDrawingName}\",\"{isMatch}\",\"{position}\",\"{height}\",\"{rotation}\",\"{layer}\",\"{textStyleId}\"");
+                                    
                                 }
                             }
-                        }
-                        else
-                        {
-                            sw.WriteLine("No objects found.");
+                            */
                         }
                     }
 
@@ -894,12 +1184,11 @@ public class MyAcadLib
 
             // Debugging: Log the contents of potentialDrawingNames
             logBuilder.AppendLine($"Extracted {GlobalVariables.PotentialDrawingNames.Count} potential drawing names in {currentFilePath}.");
-            
+
             foreach (var name in GlobalVariables.PotentialDrawingNames)
             {
-                logBuilder.AppendLine($"GlobalVariables.PotentialDrawingNames: {name}\n");
+                // logBuilder.AppendLine($"GlobalVariables.PotentialDrawingNames: {name}");
             }
-            
 
             // Write accumulated log messages to the file
             try
@@ -928,7 +1217,7 @@ public class MyAcadLib
             // Extract drawing letter from existing filename
             string filename = Path.GetFileName(currentFilePath);
             string filenameWithoutExtension = Path.GetFileNameWithoutExtension(filename);
-            string drawingLetterPattern = @"(?:^\d{4}-\d+\s*|\s+)([A-Z])";
+            string drawingLetterPattern = @"(?:^\d{4}-\d+\s*|\s+)([A-Za-z]+)";
             Match match = Regex.Match(filenameWithoutExtension, drawingLetterPattern);
             if (!match.Success)
             {
@@ -948,13 +1237,14 @@ public class MyAcadLib
             string debugLogFilePath = @"C:/Users/mnewman/Desktop/debugLog2.txt";
             // string logFilePath = @"C:/Users/mnewman/Desktop/getBestDrawingNameLog.txt";
 
-            logBuilder.AppendLine($"--- GetBestDrawingName called for {Path.GetFileName(acDoc.Name)} at {DateTime.Now} ---");
-            logBuilder.AppendLine($"Existing Candidate Name: {existingCandidateName}");
-            logBuilder.AppendLine("Extracted Names:");
+            /* logBuilder.AppendLine($"--- GetBestDrawingName called for {Path.GetFileName(acDoc.Name)} at {DateTime.Now} ---");
+            // logBuilder.AppendLine($"Existing Candidate Name: {existingCandidateName}");
+            // logBuilder.AppendLine("Extracted Names:");
             foreach (var name in extractedNames)
             {
                 logBuilder.AppendLine($"- {name}");
             }
+            */
 
             if (extractedNames == null || extractedNames.Count == 0)
             {
@@ -978,7 +1268,7 @@ public class MyAcadLib
             foreach (string name in extractedNames)
             {
                 string cleanedName = name.Replace(" ", "").Trim();
-                logBuilder.AppendLine($"Processing extracted name: {cleanedName}");
+                // logBuilder.AppendLine($"Processing extracted name: {cleanedName}");
 
                 Match match = Regex.Match(cleanedName, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
@@ -997,11 +1287,13 @@ public class MyAcadLib
                 }
             }
 
+            /*
             logBuilder.AppendLine("Detected Candidates in GetBestDrawingName function:");
             foreach (var candidate in GlobalVariables.DetectedCandidates)
             {
                 logBuilder.AppendLine($"Candidate: {candidate.name}, Numeric Value: {candidate.numberValue}, Number Part: {candidate.numberPart}, Layer: {candidate.layer}");
             }
+            */
 
             // Parse existingCandidateName
             string existingCleanedName = existingCandidateName.Replace(" ", "").Trim();
@@ -1016,7 +1308,8 @@ public class MyAcadLib
 
                     if (isExistingCandidateDetected)
                     {
-                        logBuilder.AppendLine("Existing candidate is among detected candidates. Returning existing candidate name.");
+                        // logBuilder.AppendLine("Existing candidate is among detected candidates. Returning existing candidate name.");
+
                         // Write accumulated log messages to the file
                         try
                         {
@@ -1032,7 +1325,7 @@ public class MyAcadLib
             }
             else
             {
-                logBuilder.AppendLine("An existing candidate match was not found.");
+                // logBuilder.AppendLine("An existing candidate match was not found.");
             }
 
             // Reorder the global DetectedCandidates list
@@ -1047,14 +1340,17 @@ public class MyAcadLib
                     .ThenBy(c => c.numberValue)
                     .ToList();
 
+                /*
                 logBuilder.AppendLine("Re-ordered Candidates:");
                 foreach (var candidate in GlobalVariables.DetectedCandidates)
                 {
                     logBuilder.AppendLine($"Candidate: {candidate.name}, Numeric Value: {candidate.numberValue}, Number Part: {candidate.numberPart}, Layer: {candidate.layer}");
                 }
+                */
 
                 var bestCandidate = GlobalVariables.DetectedCandidates.First();
-                logBuilder.AppendLine($"First candidate in the list: {bestCandidate.name}");
+                // logBuilder.AppendLine($"First candidate in the list: {bestCandidate.name}");
+
                 // Write accumulated log messages to the file
                 try
                 {
